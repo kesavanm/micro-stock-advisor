@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { NewsItem } from '../types/stock';
-import { Newspaper, Search, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Newspaper, Search, ThumbsUp, ThumbsDown, ExternalLink } from 'lucide-react';
 
 interface NewsSentimentFeedProps {
   newsItems: NewsItem[];
@@ -119,8 +119,19 @@ export const NewsSentimentFeed: React.FC<NewsSentimentFeedProps> = ({ newsItems 
                   </span>
                 </div>
 
-                <div className="text-[11px] text-slate-400 font-mono">
-                  {item.source} • {item.publishedTime}
+                <div className="flex items-center space-x-2 text-[11px] text-slate-400 font-mono">
+                  <span>{item.source} • {item.publishedTime}</span>
+                  {item.url && (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center space-x-1 text-cyan-400 hover:text-cyan-300 transition"
+                      title="Open full news article"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
                 </div>
               </div>
 

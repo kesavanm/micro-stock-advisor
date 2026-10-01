@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { MOCK_STOCKS, MOCK_MORNING_NEWS } from './data/mockNewsAndStocks';
 import { calculateLimitOrderStrategy } from './utils/predictorEngine';
+import { useMarketData } from './hooks/useMarketData';
 import { Header } from './components/Header';
 import { MarketTickerTape } from './components/MarketTickerTape';
 import { BudgetOverviewHero } from './components/BudgetOverviewHero';
@@ -15,10 +15,20 @@ export function App() {
   const [dailyBudget, setDailyBudget] = useState<number>(200);
   const [isSimulatorOpen, setIsSimulatorOpen] = useState<boolean>(false);
 
-  // Recalculate 5-stock allocation & limit sell orders dynamically
+  // Hook connecting real-time Finnhub market quotes and general news
+  const {
+    stocks,
+    news,
+    loading,
+    isLive,
+    lastUpdated,
+    refreshData,
+  } = useMarketData();
+
+  // Recalculate 5-stock allocation & limit sell orders dynamically from live stocks
   const summary = useMemo(() => {
-    return calculateLimitOrderStrategy(dailyBudget, MOCK_STOCKS);
-  }, [dailyBudget]);
+    return calculateLimitOrderStrategy(dailyBudget, stocks);
+  }, [dailyBudget, stocks]);
 
   const top5Tickers = summary.limitOrders.map((o) => o.ticker);
 
@@ -29,15 +39,19 @@ export function App() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-slate-950 font-sans">
       
-      {/* Top Header */}
+      {/* Top Header with live status, clock, and refresh */}
       <Header
         dailyBudget={dailyBudget}
         onBudgetChange={setDailyBudget}
         onReset={handleReset}
+        isLive={isLive}
+        loading={loading}
+        lastUpdated={lastUpdated}
+        onRefresh={refreshData}
       />
 
       {/* Rolling Live Market Ticker Tape */}
-      <MarketTickerTape stocks={MOCK_STOCKS} />
+      <MarketTickerTape stocks={stocks} />
 
       {/* Main Trading Terminal Workspace */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -61,12 +75,12 @@ export function App() {
 
         {/* Comprehensive EOD Target Predictions Table */}
         <StockPredictorTable
-          stocks={MOCK_STOCKS}
+          stocks={stocks}
           top5Tickers={top5Tickers}
         />
 
         {/* Morning Financial News AI Sentiment Parser Feed */}
-        <NewsSentimentFeed newsItems={MOCK_MORNING_NEWS} />
+        <NewsSentimentFeed newsItems={news} />
 
       </main>
 

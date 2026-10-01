@@ -1,6 +1,6 @@
 # 📈 MicroStock Predictor — AI Daily Stock Intelligence & Limit Order Strategy Engine
 
-An interactive, AI-driven daily stock recommendation web application tailored specifically for **micro-investors** (daily budget $\le \$200$, targeting up to **$100 daily profit goal**). The app parses morning financial news feeds, measures catalyst positivity (`+`), predicts End-Of-Day (EOD) price targets, and builds an automated **5-Stock Portfolio Allocation Strategy** with exact **Take-Profit Limit Sell Orders**.
+An interactive, AI-driven daily stock recommendation web application tailored specifically for **micro-investors** (daily budget $\le \$200$, targeting up to **$100 daily profit goal**). The app streams real-time market data from **Finnhub**, parses morning financial news feeds, measures catalyst positivity (`+`), predicts End-Of-Day (EOD) price targets, and builds an automated **5-Stock Portfolio Allocation Strategy** with exact **Take-Profit Limit Sell Orders**.
 
 ![MicroStock Predictor Dashboard](public/screenshots/microstock_dashboard.png)
 *MicroStock Predictor Dashboard showing $200 daily budget allocation, Top 5 limit order strategy, and $82.40 daily profit progress gauge.*
@@ -9,19 +9,56 @@ An interactive, AI-driven daily stock recommendation web application tailored sp
 
 ## ✨ Key Features
 
+- **🔴 Live Finnhub Market Data Integration**:
+  - Real-time stock quotes, session open/high/low/close prices, and day percentage changes directly via Finnhub API.
+  - Live EST/EDT market clock showing active session state (`Pre-Market`, `Market Open`, `After-Hours`, `Weekend Closed`).
+  - Auto-refresh polling every 60 seconds with manual one-click refresh button.
 - **💰 $200 Micro-Investor Daily Budget Engine**:
   - Automatically splits your daily budget ($50 to $500, default **$200**) across 5 high-momentum picks (**$40 allocation per stock**).
-- **📰 Morning News AI Sentiment Parser**:
-  - Evaluates morning press releases, earnings beats, FDA approvals, analyst upgrades, and retail momentum with positivity (`+`), neutral (`0`), and negativity (`-`) ratings (0-100 score).
-- **🎯 Predictive EOD Price Targets & Signal Reporting**:
-  - Generates clear signals in user-requested format:
+- **📰 Real-Time Financial News & NLP Sentiment Parser**:
+  - Pulls live market headlines and evaluates catalyst types: *Earnings Beat*, *FDA Approval*, *Analyst Upgrade*, *Partnership*, and *Retail Momentum*.
+  - Assigns positivity ratings (`[+]`, `[0]`, `[-]`) and calibrated 0–100 sentiment scores.
+  - Direct external links to original full articles on Reuters, Bloomberg, Yahoo Finance, and CNBC.
+- **🎯 Dynamic Predictive EOD Price Targets & Signals**:
+  - Computes momentum and sentiment-driven price targets in the format:
     `GOOG : [+] : Should go by 34% , currently at $50.00, may go upto $67.00 EOD`
 - **⚡ Automated Take-Profit Limit Sell Orders**:
-  - Recommends exact fractional share purchases and sets take-profit limit sell orders at predicted EOD targets (e.g., *"Buy 0.80 shares GOOG @ $50.00, Set Limit Sell @ $67.00"*).
+  - Calculates fractional share purchases and sets take-profit limit sell orders at predicted EOD targets (e.g., *"Buy 0.80 shares GOOG @ $50.00, Set Limit Sell @ $67.00"*).
 - **🛡️ 5% Stop-Loss Downside Guard**:
   - Includes automated stop-loss protection triggers at 5% below entry price to cap daily risk.
 - **🚀 One-Click Broker Order Execution Simulator**:
   - Transmits simulated limit sell orders directly into brokerage APIs (Robinhood / Fidelity / Schwab) with celebratory confetti.
+
+---
+
+## 🔑 API Key Setup & Configuration
+
+This application connects to the **Finnhub Stock API** for live market quotes and market news feeds.
+
+### 1. Obtain a Free Finnhub API Key
+1. Visit [finnhub.io/register](https://finnhub.io/register) and create a free account.
+2. Copy your API key from the Finnhub dashboard. The free tier includes 30–60 API calls per minute, which is sufficient for live quotes and news feeds.
+
+### 2. Configure Your `.env` File
+Create a `.env` file in the **root directory of the project**:
+
+```bash
+# Path: /home/opc/micro-stock-advisor/.env (or project root .env)
+cp .env.example .env
+```
+
+Open `.env` and add your Finnhub API key:
+
+```env
+VITE_FINNHUB_API_KEY=your_finnhub_api_key_here
+```
+
+> [!IMPORTANT]
+> **API Key Security & Git Exclusion:**
+> - The `.env` file is listed in `.gitignore` and **must never be committed to Git**.
+> - Do not hardcode your API key into any source files (`src/`).
+> - The application automatically reads the key via Vite's `import.meta.env.VITE_FINNHUB_API_KEY`.
+> - If no key is set or the API rate limit is reached, the application gracefully falls back to simulated offline datasets without crashing.
 
 ---
 
@@ -42,13 +79,14 @@ An interactive, AI-driven daily stock recommendation web application tailored sp
 
 ### Prerequisites
 
-- **Node.js**: `v18.0.0` or higher
-- **npm**: `v9.0.0` or higher
+- **Node.js**: `v18.0.0` or higher (tested on `v20.20.2`)
+- **npm**: `v9.0.0` or higher (tested on `10.8.2`)
 
 ### 1. Clone & Navigate to Project
 
 ```bash
-cd /config/.gemini/antigravity/scratch/micro-stock-advisor
+git clone git@github.com:kesavanm/micro-stock-advisor.git
+cd micro-stock-advisor
 ```
 
 ### 2. Install Dependencies
@@ -57,28 +95,42 @@ cd /config/.gemini/antigravity/scratch/micro-stock-advisor
 npm install
 ```
 
-### 3. Run Development Server
+### 3. Configure Environment
+
+```bash
+cp .env.example .env
+# Edit .env and enter your VITE_FINNHUB_API_KEY
+```
+
+### 4. Run Development Server
 
 ```bash
 npm run dev
 ```
 
-Open **`http://localhost:3010`** in your browser.
+Open **`http://localhost:5173`** (or configured port) in your browser.
 
 ---
 
-## 📦 Production Build
+## 📦 Production Build & Deployment
 
 ```bash
+# Build production bundle
 npm run build
+
+# Preview locally
 npm run preview
+
+# Deploy to Apache web root (e.g. on Oracle Cloud Infrastructure)
+sudo cp -r dist/* /var/www/html/advisor/
 ```
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Core**: React 18, TypeScript, Vite
+- **Core**: React 19, TypeScript 6, Vite 8
+- **Data Provider**: Finnhub Real-Time Stock & News REST API
 - **Styling**: Tailwind CSS CDN, Dark Glassmorphism Design System
 - **Charts & Animations**: Recharts, Canvas Confetti
 - **Icons**: Lucide React

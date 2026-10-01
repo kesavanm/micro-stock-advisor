@@ -12,6 +12,7 @@ export interface NewsItem {
   sentimentScore: number; // 0 to 100
   summary: string;
   catalystType: 'Earnings Beat' | 'FDA Approval' | 'Analyst Upgrade' | 'Partnership' | 'Retail Momentum';
+  url?: string;
 }
 
 export interface StockPrediction {
