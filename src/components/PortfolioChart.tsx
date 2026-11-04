@@ -16,9 +16,10 @@ interface PortfolioChartProps {
 }
 
 export const PortfolioChart: React.FC<PortfolioChartProps> = ({ summary }) => {
-  const initialBudget = summary.allocatedAmount || 200;
-  const targetValue = summary.totalProjectedEodValue || 282.40;
-  const profit = summary.totalProjectedProfit || 82.40;
+  const hasOrders = summary.limitOrders && summary.limitOrders.length > 0;
+  const initialBudget = hasOrders ? summary.allocatedAmount : summary.totalBudget;
+  const profit = hasOrders ? summary.totalProjectedProfit : 0;
+  const targetValue = hasOrders ? summary.totalProjectedEodValue : initialBudget;
 
   // Intraday progression data points from 09:30 AM to 16:00 PM
   const chartData = [
@@ -44,13 +45,15 @@ export const PortfolioChart: React.FC<PortfolioChartProps> = ({ summary }) => {
               Intraday Limit Order Execution & Value Growth Curve
             </h3>
             <p className="text-xs text-slate-400">
-              Simulated EOD portfolio trajectory as automated Limit Orders fill across market hours
+              {hasOrders 
+                ? 'Simulated EOD portfolio trajectory as automated Limit Orders fill across market hours' 
+                : 'Awaiting market quotes to plot dynamic portfolio trajectory'}
             </p>
           </div>
         </div>
 
         <div className="text-xs font-mono font-bold text-emerald-400">
-          Target Gain: +${summary.totalProjectedProfit.toFixed(2)} (+{summary.totalProjectedRoiPercent.toFixed(1)}%)
+          Target Gain: {summary.totalProjectedProfit >= 0 ? '+' : ''}${summary.totalProjectedProfit.toFixed(2)} ({summary.totalProjectedRoiPercent >= 0 ? '+' : ''}{summary.totalProjectedRoiPercent.toFixed(1)}%)
         </div>
       </div>
 

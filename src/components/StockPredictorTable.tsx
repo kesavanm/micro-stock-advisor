@@ -35,80 +35,88 @@ export const StockPredictorTable: React.FC<StockPredictorTableProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5 text-slate-200">
-            {stocks.map((stock) => {
-              const isBullish = stock.sentimentRating === '+';
-              const isSelectedTop5 = top5Tickers.includes(stock.ticker);
+            {stocks.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-xs text-slate-500">
+                  Scanning market... No quotes available. Configure your watchlist or click Refresh.
+                </td>
+              </tr>
+            ) : (
+              stocks.map((stock) => {
+                const isBullish = stock.sentimentRating === '+';
+                const isSelectedTop5 = top5Tickers.includes(stock.ticker);
 
-              return (
-                <tr
-                  key={stock.ticker}
-                  className={`transition ${
-                    isSelectedTop5
-                      ? 'bg-emerald-950/20 hover:bg-emerald-950/30'
-                      : 'hover:bg-slate-900/50'
-                  }`}
-                >
-                  {/* Stock Ticker & Name */}
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-mono font-black text-white text-sm">
-                        {stock.ticker}
+                return (
+                  <tr
+                    key={stock.ticker}
+                    className={`transition ${
+                      isSelectedTop5
+                        ? 'bg-emerald-950/20 hover:bg-emerald-950/30'
+                        : 'hover:bg-slate-900/50'
+                    }`}
+                  >
+                    {/* Stock Ticker & Name */}
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-mono font-black text-white text-sm">
+                          {stock.ticker}
+                        </span>
+                        <span className="text-slate-400 text-xs hidden sm:inline">
+                          — {stock.name}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Sentiment Rating */}
+                    <td className="py-3.5 px-4 font-mono font-bold">
+                      <span className={`px-2 py-0.5 rounded text-xs inline-flex items-center space-x-1 ${
+                        isBullish
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                      }`}>
+                        <span>[{stock.sentimentRating}]</span>
+                        <span>Score {stock.sentimentScore}</span>
                       </span>
-                      <span className="text-slate-400 text-xs hidden sm:inline">
-                        — {stock.name}
+                    </td>
+
+                    {/* Current Price */}
+                    <td className="py-3.5 px-4 font-mono text-slate-200">
+                      ${stock.currentPrice.toFixed(2)}
+                    </td>
+
+                    {/* Predicted % Change */}
+                    <td className="py-3.5 px-4 font-mono font-bold">
+                      <span className={`flex items-center ${
+                        isBullish ? 'text-emerald-400' : 'text-rose-400'
+                      }`}>
+                        {isBullish ? <ArrowUpRight className="w-4 h-4 mr-0.5" /> : <ArrowDownRight className="w-4 h-4 mr-0.5" />}
+                        Should go by {stock.expectedGainPercent.toFixed(1)}%
                       </span>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* Sentiment Rating */}
-                  <td className="py-3.5 px-4 font-mono font-bold">
-                    <span className={`px-2 py-0.5 rounded text-xs inline-flex items-center space-x-1 ${
-                      isBullish
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                    }`}>
-                      <span>[{stock.sentimentRating}]</span>
-                      <span>Score {stock.sentimentScore}</span>
-                    </span>
-                  </td>
+                    {/* Target EOD Price */}
+                    <td className="py-3.5 px-4 font-mono font-extrabold text-cyan-300">
+                      Target ${stock.predictedEodTarget.toFixed(2)} EOD
+                    </td>
 
-                  {/* Current Price */}
-                  <td className="py-3.5 px-4 font-mono text-slate-200">
-                    ${stock.currentPrice.toFixed(2)}
-                  </td>
-
-                  {/* Predicted % Change */}
-                  <td className="py-3.5 px-4 font-mono font-bold">
-                    <span className={`flex items-center ${
-                      isBullish ? 'text-emerald-400' : 'text-rose-400'
-                    }`}>
-                      {isBullish ? <ArrowUpRight className="w-4 h-4 mr-0.5" /> : <ArrowDownRight className="w-4 h-4 mr-0.5" />}
-                      Should go by {stock.expectedGainPercent.toFixed(1)}%
-                    </span>
-                  </td>
-
-                  {/* Target EOD Price */}
-                  <td className="py-3.5 px-4 font-mono font-extrabold text-cyan-300">
-                    Target ${stock.predictedEodTarget.toFixed(2)} EOD
-                  </td>
-
-                  {/* Portfolio Strategy Badge */}
-                  <td className="py-3.5 px-4">
-                    {isSelectedTop5 ? (
-                      <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/40">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Included in $200 Plan</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 text-xs border border-white/5">
-                        <ShieldAlert className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Watchlist / Avoid</span>
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
+                    {/* Portfolio Strategy Badge */}
+                    <td className="py-3.5 px-4">
+                      {isSelectedTop5 ? (
+                        <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/40">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Included in Plan</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 text-xs border border-white/5">
+                          <ShieldAlert className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Watchlist</span>
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>

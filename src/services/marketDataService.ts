@@ -2,23 +2,134 @@ import type { StockPrediction, NewsItem, StockCategory, SentimentRating } from '
 
 const DEFAULT_FINNHUB_KEY = import.meta.env.VITE_FINNHUB_API_KEY || '';
 
-export interface WatchlistStockInfo {
-  ticker: string;
-  name: string;
-  category: StockCategory;
-  defaultCatalyst: string;
+// Configurable cache TTL (defaults to 2 hours)
+const DEFAULT_TTL_HOURS = Number(import.meta.env.VITE_NEWS_CACHE_TTL_HOURS) || 2;
+const CACHE_TTL_MS = Math.max(15, DEFAULT_TTL_HOURS * 60) * 60 * 1000;
+const CACHE_STORAGE_KEY = 'micro_advisor_trending_cache';
+
+export interface TrendingCacheData {
+  timestamp: number;
+  trendingTickers: string[];
+  suggestions: string[];
 }
 
-export const WATCHLIST_CONFIG: WatchlistStockInfo[] = [
-  { ticker: 'GOOG', name: 'Alphabet Inc. (Google)', category: 'Tech', defaultCatalyst: 'Cloud AI & Quantum Architecture Expansion' },
-  { ticker: 'NVDA', name: 'NVIDIA Corporation', category: 'AI & Fintech', defaultCatalyst: 'Sovereign Compute & Enterprise AI Cluster Demand' },
-  { ticker: 'PLTR', name: 'Palantir Technologies', category: 'AI & Fintech', defaultCatalyst: 'AIP Commercial Growth & Defense Logistics Contracts' },
-  { ticker: 'SOFI', name: 'SoFi Technologies', category: 'AI & Fintech', defaultCatalyst: 'Member Deposits Surge & Digital Banking Profit Margin' },
-  { ticker: 'AMD', name: 'Advanced Micro Devices', category: 'Tech', defaultCatalyst: 'Next-Gen AI Accelerators & Data Center Market Share' },
-  { ticker: 'RIVN', name: 'Rivian Automotive', category: 'EV & Auto', defaultCatalyst: 'Next-Gen Platform Ramp & Production Cost Reductions' },
-  { ticker: 'HOOD', name: 'Robinhood Markets', category: 'AI & Fintech', defaultCatalyst: 'Global 24/7 Trading & Crypto High-Yield Inflows' },
-  { ticker: 'LCID', name: 'Lucid Group Inc.', category: 'EV & Auto', defaultCatalyst: 'Supply Chain & Gravity SUV Production Timeline' },
-];
+export function getCachedTrending(): TrendingCacheData | null {
+  try {
+    const raw = localStorage.getItem(CACHE_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed: TrendingCacheData = JSON.parse(raw);
+    if (!parsed || !parsed.timestamp || !Array.isArray(parsed.trendingTickers)) {
+      return null;
+    }
+    const age = Date.now() - parsed.timestamp;
+    if (age < CACHE_TTL_MS) {
+      return parsed;
+    }
+  } catch (err) {
+    console.warn('Failed reading trending cache from localStorage:', err);
+  }
+  return null;
+}
+
+export function setCachedTrending(trendingTickers: string[], suggestions: string[]): void {
+  try {
+    const payload: TrendingCacheData = {
+      timestamp: Date.now(),
+      trendingTickers: Array.from(new Set(trendingTickers.map((t) => t.toUpperCase().trim()).filter(Boolean))),
+      suggestions: Array.from(new Set(suggestions.map((t) => t.toUpperCase().trim()).filter(Boolean))),
+    };
+    localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(payload));
+  } catch (err) {
+    console.warn('Failed saving trending cache to localStorage:', err);
+  }
+}
+
+export async function loadInitialTrendingCache(): Promise<TrendingCacheData | null> {
+  // 1. Check local storage cache first (< 2 hours old)
+  const local = getCachedTrending();
+  if (local && local.trendingTickers.length > 0) {
+    return local;
+  }
+
+  // 2. Fetch server-served 2-hour morning news cache
+  try {
+    const basePath = import.meta.env.BASE_URL || '/advisor/';
+    const cacheUrl = `${basePath.endsWith('/') ? basePath : basePath + '/'}trending-cache.json?v=${Date.now()}`;
+    const res = await fetch(cacheUrl);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.trendingTickers) && data.trendingTickers.length > 0) {
+        setCachedTrending(data.trendingTickers, data.suggestions || []);
+        return {
+          timestamp: data.timestamp || Date.now(),
+          trendingTickers: data.trendingTickers,
+          suggestions: data.suggestions || [],
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Could not load trending-cache.json from server:', err);
+  }
+
+  return null;
+}
+
+export function getSavedWatchlist(): string[] {
+  try {
+    const saved = localStorage.getItem('micro_advisor_watchlist');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((t) => String(t).toUpperCase().trim()).filter(Boolean);
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to parse saved watchlist from localStorage:', err);
+  }
+
+  const envTickers = import.meta.env.VITE_DEFAULT_TICKERS;
+  if (envTickers && typeof envTickers === 'string') {
+    const list = envTickers.split(',').map((t) => t.trim().toUpperCase()).filter(Boolean);
+    if (list.length > 0) return list;
+  }
+
+  const cached = getCachedTrending();
+  if (cached && cached.trendingTickers.length > 0) {
+    return cached.trendingTickers;
+  }
+
+  return [];
+}
+
+export function saveWatchlist(tickers: string[]): void {
+  try {
+    const sanitized = Array.from(new Set(tickers.map((t) => t.toUpperCase().trim()).filter(Boolean)));
+    localStorage.setItem('micro_advisor_watchlist', JSON.stringify(sanitized));
+  } catch (err) {
+    console.warn('Failed to save watchlist to localStorage:', err);
+  }
+}
+
+export function resetSavedWatchlist(): string[] {
+  try {
+    localStorage.removeItem('micro_advisor_watchlist');
+  } catch (err) {
+    console.warn('Failed to reset watchlist in localStorage:', err);
+  }
+
+  const cached = getCachedTrending();
+  if (cached && cached.trendingTickers.length > 0) {
+    return cached.trendingTickers;
+  }
+
+  const envTickers = import.meta.env.VITE_DEFAULT_TICKERS;
+  if (envTickers && typeof envTickers === 'string') {
+    const list = envTickers.split(',').map((t) => t.trim().toUpperCase()).filter(Boolean);
+    if (list.length > 0) return list;
+  }
+
+  return [];
+}
 
 interface FinnhubQuote {
   c: number;  // Current price
@@ -31,6 +142,12 @@ interface FinnhubQuote {
   t: number;  // Timestamp
 }
 
+interface FinnhubProfile {
+  name?: string;
+  ticker?: string;
+  finnhubIndustry?: string;
+}
+
 interface FinnhubNewsArticle {
   category: string;
   datetime: number;
@@ -41,6 +158,46 @@ interface FinnhubNewsArticle {
   source: string;
   summary: string;
   url: string;
+}
+
+// In-memory cache for company profiles to avoid redundant network calls
+const profileCache = new Map<string, { name: string; category: StockCategory }>();
+
+function mapIndustryToCategory(industry?: string): StockCategory {
+  if (!industry) return 'Tech';
+  const lower = industry.toLowerCase();
+  if (lower.includes('auto') || lower.includes('motor') || lower.includes('vehicle')) return 'EV & Auto';
+  if (lower.includes('bio') || lower.includes('pharma') || lower.includes('health')) return 'Biotech';
+  if (lower.includes('finan') || lower.includes('bank') || lower.includes('invest') || lower.includes('crypto')) return 'AI & Fintech';
+  if (lower.includes('retail') || lower.includes('consumer') || lower.includes('beverage') || lower.includes('food')) return 'Consumer';
+  if (lower.includes('tech') || lower.includes('semiconductor') || lower.includes('software')) return 'Tech';
+  return 'General';
+}
+
+async function fetchCompanyProfile(ticker: string, apiKey: string): Promise<{ name: string; category: StockCategory }> {
+  const cached = profileCache.get(ticker);
+  if (cached) return cached;
+
+  try {
+    const res = await fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${ticker}&token=${apiKey}`);
+    if (res.ok) {
+      const data: FinnhubProfile = await res.json();
+      if (data && data.name) {
+        const info = {
+          name: data.name,
+          category: mapIndustryToCategory(data.finnhubIndustry),
+        };
+        profileCache.set(ticker, info);
+        return info;
+      }
+    }
+  } catch (err) {
+    console.warn(`Could not load profile for ${ticker}:`, err);
+  }
+
+  const fallback = { name: ticker, category: 'Tech' as StockCategory };
+  profileCache.set(ticker, fallback);
+  return fallback;
 }
 
 // NLP financial lexicon for market news sentiment scoring
@@ -109,6 +266,8 @@ function formatPublishedTime(timestampSec: number): string {
 }
 
 export async function fetchLiveNews(apiKey: string = DEFAULT_FINNHUB_KEY): Promise<NewsItem[]> {
+  if (!apiKey) return [];
+
   try {
     const res = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${apiKey}`);
     if (!res.ok) {
@@ -119,7 +278,7 @@ export async function fetchLiveNews(apiKey: string = DEFAULT_FINNHUB_KEY): Promi
       return [];
     }
 
-    return articles.slice(0, 15).map((art, idx) => {
+    return articles.slice(0, 30).map((art, idx) => {
       const { score, rating } = analyzeNewsSentiment(`${art.headline} ${art.summary}`);
       const catalystType = classifyCatalystType(art.headline, art.summary);
       const ticker = art.related && art.related.trim().length > 0 && art.related.length <= 5
@@ -145,17 +304,38 @@ export async function fetchLiveNews(apiKey: string = DEFAULT_FINNHUB_KEY): Promi
   }
 }
 
-export async function fetchLiveStockQuotes(apiKey: string = DEFAULT_FINNHUB_KEY): Promise<StockPrediction[]> {
-  const stockPromises = WATCHLIST_CONFIG.map(async (stock) => {
+export async function fetchLiveStockQuotes(
+  apiKey: string = DEFAULT_FINNHUB_KEY,
+  tickersToFetch?: string[],
+  liveNews: NewsItem[] = []
+): Promise<StockPrediction[]> {
+  if (!apiKey) return [];
+
+  const tickers = tickersToFetch && tickersToFetch.length > 0
+    ? tickersToFetch
+    : getSavedWatchlist();
+
+  if (!tickers || tickers.length === 0) {
+    return [];
+  }
+
+  const stockPromises = tickers.map(async (tickerSymbol) => {
+    const ticker = tickerSymbol.toUpperCase().trim();
+    if (!ticker) return null;
+
     try {
-      const quoteRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${stock.ticker}&token=${apiKey}`);
+      const [quoteRes, profile] = await Promise.all([
+        fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${apiKey}`),
+        fetchCompanyProfile(ticker, apiKey),
+      ]);
+
       if (!quoteRes.ok) {
         throw new Error(`Quote failed with HTTP ${quoteRes.status}`);
       }
       const quote: FinnhubQuote = await quoteRes.json();
 
       if (!quote || typeof quote.c !== 'number' || quote.c <= 0) {
-        throw new Error(`Invalid quote payload for ${stock.ticker}`);
+        throw new Error(`Invalid quote payload for ${ticker}`);
       }
 
       const currentPrice = Number(quote.c.toFixed(2));
@@ -164,25 +344,41 @@ export async function fetchLiveStockQuotes(apiKey: string = DEFAULT_FINNHUB_KEY)
       const dayLow = quote.l > 0 ? Number(quote.l.toFixed(2)) : currentPrice;
       const changePercent = typeof quote.dp === 'number' ? Number(quote.dp.toFixed(2)) : 0;
 
-      // Real sentiment score calculation combining momentum and positive bias
-      const sentimentScore = Math.max(25, Math.min(98, Math.round(50 + changePercent * 4 + 20)));
-      const sentimentRating: SentimentRating = sentimentScore >= 55 ? '+' : sentimentScore <= 45 ? '-' : '0';
+      // Find if this ticker is explicitly mentioned in any live morning news article
+      const matchingNews = liveNews.find((n) => n.ticker.toUpperCase() === ticker);
+
+      let sentimentScore: number;
+      let sentimentRating: SentimentRating;
+      let catalystHeadline: string;
+
+      if (matchingNews) {
+        sentimentScore = matchingNews.sentimentScore;
+        sentimentRating = matchingNews.sentimentRating;
+        catalystHeadline = matchingNews.headline;
+      } else {
+        // Derive dynamic sentiment from market session momentum & price volatility
+        sentimentScore = Math.max(20, Math.min(98, Math.round(50 + changePercent * 4 + (changePercent >= 0 ? 15 : -10))));
+        sentimentRating = sentimentScore >= 55 ? '+' : sentimentScore <= 45 ? '-' : '0';
+        catalystHeadline = `Market Session Action (${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}% Intraday Momentum)`;
+      }
 
       // Project realistic EOD Target based on current volatility and sentiment
       let expectedGainPercent: number;
       if (sentimentRating === '+') {
-        const baseGain = Math.max(3.5, Math.abs(changePercent) * 1.4 + 4.5);
+        const baseGain = Math.max(3.0, Math.abs(changePercent) * 1.3 + 4.0);
         expectedGainPercent = Number(Math.min(38.0, baseGain).toFixed(1));
-      } else {
+      } else if (sentimentRating === '-') {
         const baseLoss = -Math.max(2.5, Math.abs(changePercent) * 1.2 + 2.0);
         expectedGainPercent = Number(Math.max(-25.0, baseLoss).toFixed(1));
+      } else {
+        expectedGainPercent = Number((changePercent * 0.8).toFixed(1));
       }
 
       const predictedEodTarget = Number((currentPrice * (1 + expectedGainPercent / 100)).toFixed(2));
 
-      const recommendedAction = expectedGainPercent >= 22
+      const recommendedAction = expectedGainPercent >= 20
         ? 'STRONG BUY'
-        : expectedGainPercent >= 6
+        : expectedGainPercent >= 5
         ? 'BUY'
         : expectedGainPercent >= 0
         ? 'HOLD'
@@ -201,22 +397,22 @@ export async function fetchLiveStockQuotes(apiKey: string = DEFAULT_FINNHUB_KEY)
       const volumeSpike = `${(Math.abs(changePercent) * 0.6 + 1.8).toFixed(1)}x Vol`;
 
       return {
-        ticker: stock.ticker,
-        name: stock.name,
-        category: stock.category,
+        ticker,
+        name: profile.name || ticker,
+        category: profile.category,
         currentPrice,
         predictedEodTarget,
         expectedGainPercent,
         sentimentRating,
         sentimentScore,
-        catalystHeadline: `${stock.defaultCatalyst} (Day Change: ${changePercent >= 0 ? '+' : ''}${changePercent}%)`,
+        catalystHeadline,
         volumeSpike,
         recommendedAction,
         historicalIntraday,
       } as StockPrediction;
 
     } catch (err) {
-      console.warn(`Could not fetch live quote for ${stock.ticker}:`, err);
+      console.warn(`Could not fetch live quote for ${ticker}:`, err);
       return null;
     }
   });

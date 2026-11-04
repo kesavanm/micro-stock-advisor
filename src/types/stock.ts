@@ -1,6 +1,6 @@
 export type SentimentRating = '+' | '0' | '-';
 
-export type StockCategory = 'Tech' | 'AI & Fintech' | 'EV & Auto' | 'Biotech' | 'Consumer';
+export type StockCategory = 'Tech' | 'AI & Fintech' | 'EV & Auto' | 'Biotech' | 'Consumer' | 'Financial' | 'General';
 
 export interface NewsItem {
   id: string;

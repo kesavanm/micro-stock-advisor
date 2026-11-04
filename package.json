@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/generate_trending_cache.cjs",
     "build": "tsc -b && vite build",
+    "cache:refresh": "node scripts/generate_trending_cache.cjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },

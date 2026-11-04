@@ -9,20 +9,28 @@ import { StockPredictorTable } from './components/StockPredictorTable';
 import { NewsSentimentFeed } from './components/NewsSentimentFeed';
 import { PortfolioChart } from './components/PortfolioChart';
 import { OrderSimulatorModal } from './components/OrderSimulatorModal';
-import { TrendingUp } from 'lucide-react';
+import { WatchlistModal } from './components/WatchlistModal';
+import { TrendingUp, AlertCircle } from 'lucide-react';
 
 export function App() {
   const [dailyBudget, setDailyBudget] = useState<number>(200);
   const [isSimulatorOpen, setIsSimulatorOpen] = useState<boolean>(false);
+  const [isWatchlistOpen, setIsWatchlistOpen] = useState<boolean>(false);
 
-  // Hook connecting real-time Finnhub market quotes and general news
+  // Hook connecting real-time Finnhub market quotes, general news & dynamic 2-hour trending cache
   const {
+    watchlist,
+    suggestions,
     stocks,
     news,
     loading,
     isLive,
     lastUpdated,
+    error,
     refreshData,
+    addTicker,
+    removeTicker,
+    resetToDefaultWatchlist,
   } = useMarketData();
 
   // Recalculate 5-stock allocation & limit sell orders dynamically from live stocks
@@ -39,7 +47,7 @@ export function App() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-slate-950 font-sans">
       
-      {/* Top Header with live status, clock, and refresh */}
+      {/* Top Header with live status, clock, watchlist, and refresh */}
       <Header
         dailyBudget={dailyBudget}
         onBudgetChange={setDailyBudget}
@@ -47,8 +55,20 @@ export function App() {
         isLive={isLive}
         loading={loading}
         lastUpdated={lastUpdated}
-        onRefresh={refreshData}
+        onRefresh={() => refreshData()}
+        watchlistCount={watchlist.length}
+        onOpenWatchlist={() => setIsWatchlistOpen(true)}
       />
+
+      {/* Error alert banner if API key or connection fails */}
+      {error && (
+        <div className="bg-rose-950/60 border-b border-rose-500/30 px-4 py-2.5 text-xs text-rose-300 flex items-center justify-between">
+          <div className="flex items-center space-x-2 max-w-7xl mx-auto w-full">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>{error}</span>
+          </div>
+        </div>
+      )}
 
       {/* Rolling Live Market Ticker Tape */}
       <MarketTickerTape stocks={stocks} />
@@ -89,6 +109,17 @@ export function App() {
         isOpen={isSimulatorOpen}
         onClose={() => setIsSimulatorOpen(false)}
         limitOrders={summary.limitOrders}
+      />
+
+      {/* Dynamic Watchlist Manager Modal with Morning News Suggestions */}
+      <WatchlistModal
+        isOpen={isWatchlistOpen}
+        onClose={() => setIsWatchlistOpen(false)}
+        watchlist={watchlist}
+        suggestions={suggestions}
+        onAddTicker={addTicker}
+        onRemoveTicker={removeTicker}
+        onResetWatchlist={resetToDefaultWatchlist}
       />
 
       {/* Footer */}

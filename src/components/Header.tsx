@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Clock, DollarSign, RefreshCw, Radio } from 'lucide-react';
+import { TrendingUp, Clock, DollarSign, RefreshCw, Radio, ListFilter } from 'lucide-react';
 
 interface HeaderProps {
   dailyBudget: number;
@@ -9,6 +9,8 @@ interface HeaderProps {
   loading: boolean;
   lastUpdated: Date | null;
   onRefresh: () => void;
+  watchlistCount: number;
+  onOpenWatchlist: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,6 +20,8 @@ export const Header: React.FC<HeaderProps> = ({
   loading,
   lastUpdated,
   onRefresh,
+  watchlistCount,
+  onOpenWatchlist,
 }) => {
   const [estTimeStr, setEstTimeStr] = useState<string>('');
   const [marketStatus, setMarketStatus] = useState<string>('Market Active');
@@ -91,7 +95,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               ) : (
                 <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold tracking-wider">
-                  SIMULATED
+                  SCANNING
                 </span>
               )}
             </div>
@@ -101,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Live Market Clock, Budget Indicator & Actions */}
+        {/* Live Market Clock, Watchlist, Budget Indicator & Actions */}
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Live Market Clock */}
           <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-white/10 text-xs">
@@ -114,6 +118,16 @@ export const Header: React.FC<HeaderProps> = ({
             <Clock className="w-3.5 h-3.5 text-cyan-400" />
             <span className="font-mono text-cyan-300 font-bold">{estTimeStr || '08:45 AM EST'}</span>
           </div>
+
+          {/* Watchlist Manager Button */}
+          <button
+            onClick={onOpenWatchlist}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10 text-xs font-semibold transition"
+            title="Manage dynamic stock watchlist"
+          >
+            <ListFilter className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Watchlist ({watchlistCount})</span>
+          </button>
 
           {/* Daily Budget Cap */}
           <div className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-300 font-bold font-mono">

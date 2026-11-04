@@ -7,6 +7,18 @@ interface MarketTickerTapeProps {
 }
 
 export const MarketTickerTape: React.FC<MarketTickerTapeProps> = ({ stocks }) => {
+  if (!stocks || stocks.length === 0) {
+    return (
+      <div className="w-full bg-slate-950 border-y border-white/10 py-2.5 overflow-hidden relative">
+        <div className="flex items-center px-4 space-x-3 text-xs text-slate-400 font-mono">
+          <Flame className="w-4 h-4 text-amber-400 animate-pulse" />
+          <span className="uppercase tracking-wider font-bold text-amber-400">Morning Signals:</span>
+          <span className="animate-pulse text-slate-400">Connecting to live market stream & loading quotes...</span>
+        </div>
+      </div>
+    );
+  }
+
   // Duplicate array for seamless infinite marquee loop
   const tickerItems = [...stocks, ...stocks];
 
@@ -20,7 +32,7 @@ export const MarketTickerTape: React.FC<MarketTickerTapeProps> = ({ stocks }) =>
         </div>
 
         {/* Marquee Track */}
-        <div className="animate-ticker space-x-6 pl-4">
+        <div className="animate-ticker space-x-6 pl-4 flex items-center">
           {tickerItems.map((item, idx) => {
             const isBullish = item.sentimentRating === '+';
             return (
