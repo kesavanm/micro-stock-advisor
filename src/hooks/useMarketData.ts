@@ -3,19 +3,28 @@ import type { StockPrediction, NewsItem } from '../types/stock';
 import {
   fetchLiveStockQuotes,
   fetchLiveNews,
-  getSavedWatchlist,
-  saveWatchlist,
-  resetSavedWatchlist,
+  fetchServerTrendingCache,
   getCachedTrending,
-  loadInitialTrendingCache,
+  isCustomWatchlistActive,
+  getCustomWatchlist,
+  saveCustomWatchlist,
+  resetToAutoTrendingWatchlist,
 } from '../services/marketDataService';
 
 export function useMarketData() {
-  const [watchlist, setWatchlistState] = useState<string[]>(() => getSavedWatchlist());
+  const [watchlist, setWatchlistState] = useState<string[]>(() => {
+    if (isCustomWatchlistActive()) {
+      return getCustomWatchlist();
+    }
+    const cached = getCachedTrending();
+    return cached && cached.trendingTickers ? cached.trendingTickers : [];
+  });
+
   const [suggestions, setSuggestions] = useState<string[]>(() => {
     const cached = getCachedTrending();
-    return cached ? cached.suggestions : [];
+    return cached && cached.suggestions ? cached.suggestions : [];
   });
+
   const [stocks, setStocks] = useState<StockPrediction[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -40,16 +49,26 @@ export function useMarketData() {
     }
 
     try {
-      // 1. If watchlist is currently empty, load the 2-hour morning news cache
-      let activeWatchlist = customTickers || watchlist;
-      if (activeWatchlist.length === 0) {
-        const cachedData = await loadInitialTrendingCache();
-        if (cachedData && cachedData.trendingTickers.length > 0) {
-          activeWatchlist = cachedData.trendingTickers;
-          if (isMounted.current) {
-            setWatchlistState(cachedData.trendingTickers);
-            setSuggestions(cachedData.suggestions);
-          }
+      // 1. Always fetch fresh 2-hour server trending cache first
+      const serverCache = await fetchServerTrendingCache();
+
+      let activeWatchlist: string[];
+
+      if (customTickers && customTickers.length > 0) {
+        activeWatchlist = customTickers;
+      } else if (isCustomWatchlistActive()) {
+        activeWatchlist = getCustomWatchlist();
+      } else if (serverCache && serverCache.trendingTickers.length > 0) {
+        activeWatchlist = serverCache.trendingTickers;
+      } else {
+        const cached = getCachedTrending();
+        activeWatchlist = cached ? cached.trendingTickers : [];
+      }
+
+      if (isMounted.current) {
+        setWatchlistState(activeWatchlist);
+        if (serverCache && Array.isArray(serverCache.suggestions)) {
+          setSuggestions(serverCache.suggestions);
         }
       }
 
@@ -81,11 +100,11 @@ export function useMarketData() {
         setLoading(false);
       }
     }
-  }, [watchlist]);
+  }, []);
 
   const updateWatchlist = useCallback((newTickers: string[]) => {
     const sanitized = Array.from(new Set(newTickers.map((t) => t.toUpperCase().trim()).filter(Boolean)));
-    saveWatchlist(sanitized);
+    saveCustomWatchlist(sanitized);
     setWatchlistState(sanitized);
   }, []);
 
@@ -104,9 +123,11 @@ export function useMarketData() {
   }, [watchlist, updateWatchlist]);
 
   const resetToDefaultWatchlist = useCallback(() => {
-    const defaults = resetSavedWatchlist();
+    const defaults = resetToAutoTrendingWatchlist();
     setWatchlistState(defaults);
-  }, []);
+    // Refresh to sync immediately with the server's trending cache
+    refreshData(defaults);
+  }, [refreshData]);
 
   useEffect(() => {
     isMounted.current = true;

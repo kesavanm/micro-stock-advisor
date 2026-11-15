@@ -5,7 +5,9 @@ const DEFAULT_FINNHUB_KEY = import.meta.env.VITE_FINNHUB_API_KEY || '';
 // Configurable cache TTL (defaults to 2 hours)
 const DEFAULT_TTL_HOURS = Number(import.meta.env.VITE_NEWS_CACHE_TTL_HOURS) || 2;
 const CACHE_TTL_MS = Math.max(15, DEFAULT_TTL_HOURS * 60) * 60 * 1000;
-const CACHE_STORAGE_KEY = 'micro_advisor_trending_cache';
+
+const TRENDING_CACHE_KEY = 'micro_advisor_trending_cache';
+const CUSTOM_WATCHLIST_KEY = 'micro_advisor_custom_watchlist';
 
 export interface TrendingCacheData {
   timestamp: number;
@@ -15,7 +17,7 @@ export interface TrendingCacheData {
 
 export function getCachedTrending(): TrendingCacheData | null {
   try {
-    const raw = localStorage.getItem(CACHE_STORAGE_KEY);
+    const raw = localStorage.getItem(TRENDING_CACHE_KEY);
     if (!raw) return null;
     const parsed: TrendingCacheData = JSON.parse(raw);
     if (!parsed || !parsed.timestamp || !Array.isArray(parsed.trendingTickers)) {
@@ -31,35 +33,31 @@ export function getCachedTrending(): TrendingCacheData | null {
   return null;
 }
 
-export function setCachedTrending(trendingTickers: string[], suggestions: string[]): void {
+export function setCachedTrending(trendingTickers: string[], suggestions: string[], timestamp?: number): void {
   try {
     const payload: TrendingCacheData = {
-      timestamp: Date.now(),
+      timestamp: timestamp || Date.now(),
       trendingTickers: Array.from(new Set(trendingTickers.map((t) => t.toUpperCase().trim()).filter(Boolean))),
       suggestions: Array.from(new Set(suggestions.map((t) => t.toUpperCase().trim()).filter(Boolean))),
     };
-    localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(payload));
+    localStorage.setItem(TRENDING_CACHE_KEY, JSON.stringify(payload));
   } catch (err) {
     console.warn('Failed saving trending cache to localStorage:', err);
   }
 }
 
-export async function loadInitialTrendingCache(): Promise<TrendingCacheData | null> {
-  // 1. Check local storage cache first (< 2 hours old)
-  const local = getCachedTrending();
-  if (local && local.trendingTickers.length > 0) {
-    return local;
-  }
-
-  // 2. Fetch server-served 2-hour morning news cache
+/**
+ * Fetch fresh 2-hour morning trending cache from Apache server
+ */
+export async function fetchServerTrendingCache(): Promise<TrendingCacheData | null> {
   try {
     const basePath = import.meta.env.BASE_URL || '/advisor/';
     const cacheUrl = `${basePath.endsWith('/') ? basePath : basePath + '/'}trending-cache.json?v=${Date.now()}`;
-    const res = await fetch(cacheUrl);
+    const res = await fetch(cacheUrl, { cache: 'no-cache' });
     if (res.ok) {
       const data = await res.json();
       if (data && Array.isArray(data.trendingTickers) && data.trendingTickers.length > 0) {
-        setCachedTrending(data.trendingTickers, data.suggestions || []);
+        setCachedTrending(data.trendingTickers, data.suggestions || [], data.timestamp);
         return {
           timestamp: data.timestamp || Date.now(),
           trendingTickers: data.trendingTickers,
@@ -71,61 +69,78 @@ export async function loadInitialTrendingCache(): Promise<TrendingCacheData | nu
     console.warn('Could not load trending-cache.json from server:', err);
   }
 
-  return null;
+  // Fallback to local cache if server is temporarily unreachable
+  return getCachedTrending();
 }
 
-export function getSavedWatchlist(): string[] {
+export function isCustomWatchlistActive(): boolean {
   try {
-    const saved = localStorage.getItem('micro_advisor_watchlist');
-    if (saved) {
-      const parsed = JSON.parse(saved);
+    const custom = localStorage.getItem(CUSTOM_WATCHLIST_KEY);
+    if (custom) {
+      const parsed = JSON.parse(custom);
+      return Array.isArray(parsed) && parsed.length > 0;
+    }
+  } catch (err) {
+    // ignore
+  }
+  return false;
+}
+
+export function getCustomWatchlist(): string[] {
+  try {
+    const custom = localStorage.getItem(CUSTOM_WATCHLIST_KEY);
+    if (custom) {
+      const parsed = JSON.parse(custom);
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.map((t) => String(t).toUpperCase().trim()).filter(Boolean);
       }
     }
   } catch (err) {
-    console.warn('Failed to parse saved watchlist from localStorage:', err);
+    // ignore
   }
-
-  const envTickers = import.meta.env.VITE_DEFAULT_TICKERS;
-  if (envTickers && typeof envTickers === 'string') {
-    const list = envTickers.split(',').map((t) => t.trim().toUpperCase()).filter(Boolean);
-    if (list.length > 0) return list;
-  }
-
-  const cached = getCachedTrending();
-  if (cached && cached.trendingTickers.length > 0) {
-    return cached.trendingTickers;
-  }
-
   return [];
 }
 
-export function saveWatchlist(tickers: string[]): void {
+export function saveCustomWatchlist(tickers: string[]): void {
   try {
     const sanitized = Array.from(new Set(tickers.map((t) => t.toUpperCase().trim()).filter(Boolean)));
-    localStorage.setItem('micro_advisor_watchlist', JSON.stringify(sanitized));
+    localStorage.setItem(CUSTOM_WATCHLIST_KEY, JSON.stringify(sanitized));
   } catch (err) {
-    console.warn('Failed to save watchlist to localStorage:', err);
+    console.warn('Failed saving custom watchlist:', err);
   }
 }
 
-export function resetSavedWatchlist(): string[] {
+export function resetToAutoTrendingWatchlist(): string[] {
   try {
+    localStorage.removeItem(CUSTOM_WATCHLIST_KEY);
+    // Also clear legacy key if present
     localStorage.removeItem('micro_advisor_watchlist');
   } catch (err) {
-    console.warn('Failed to reset watchlist in localStorage:', err);
+    console.warn('Failed resetting to auto-trending watchlist:', err);
   }
 
   const cached = getCachedTrending();
   if (cached && cached.trendingTickers.length > 0) {
     return cached.trendingTickers;
   }
+  return [];
+}
+
+// Backward-compatible alias
+export function getSavedWatchlist(): string[] {
+  if (isCustomWatchlistActive()) {
+    return getCustomWatchlist();
+  }
 
   const envTickers = import.meta.env.VITE_DEFAULT_TICKERS;
   if (envTickers && typeof envTickers === 'string') {
     const list = envTickers.split(',').map((t) => t.trim().toUpperCase()).filter(Boolean);
     if (list.length > 0) return list;
+  }
+
+  const cached = getCachedTrending();
+  if (cached && cached.trendingTickers.length > 0) {
+    return cached.trendingTickers;
   }
 
   return [];
