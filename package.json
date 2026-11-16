@@ -8,6 +8,7 @@
     "prebuild": "node scripts/generate_trending_cache.cjs",
     "build": "tsc -b && vite build",
     "cache:refresh": "node scripts/generate_trending_cache.cjs",
+    "admin": "node scripts/admin-server.cjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },

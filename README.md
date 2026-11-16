@@ -127,11 +127,64 @@ sudo cp -r dist/* /var/www/html/advisor/
 
 ---
 
+## 🔐 Password-Protected Admin Panel
+
+Open **`https://your-domain/advisor/#admin`** (or click the small ⚙ **Admin** link in the footer).
+
+The panel lets you:
+
+- **Refresh the trending cache** — re-runs the Finnhub morning-news scanner and updates the deployed cache.
+- **Delete cache files** — removes `public/`, `dist/`, and deployed `trending-cache.json`.
+- **Hard refresh (deploy dist)** — re-copies `index.html`, CSS, JS, and public files to Apache without rebuilding.
+- **Remove stale assets** — deletes old hashed bundles that the current `index.html` no longer references.
+- **Build & deploy new version** — runs `npm run build`, deploys the new bundle, and prunes stale assets.
+- **Switch the theme** — Light, Dark, or follow the operating system. The choice is saved in the browser.
+
+### 1. Configure the admin password
+
+Add a strong password to `.env` (never commit it):
+
+```env
+ADMIN_PASSWORD=your-long-random-password
+```
+
+### 2. Start the admin API server
+
+```bash
+npm run admin
+```
+
+It listens on `127.0.0.1:8081` and reads `.env` automatically. To keep it running after logout/reboot, install the sample systemd unit:
+
+```bash
+sudo cp scripts/msp-admin.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now msp-admin
+```
+
+### 3. Proxy the API through Apache
+
+`/etc/httpd/conf.d/msp-admin.conf`:
+
+```apache
+<Location "/advisor/api/admin">
+    ProxyPass "http://127.0.0.1:8081"
+    ProxyPassReverse "http://127.0.0.1:8081"
+</Location>
+```
+
+The build/deploy buttons use `sudo -n`, so the service user needs passwordless sudo for the copy commands — or set `ADMIN_USE_SUDO=0` if the deploy directory is writable by that user.
+
+> [!NOTE]
+> The admin API binds to `127.0.0.1` only. It is never exposed directly to the internet; Apache proxies it. Login attempts are rate-limited, and sessions expire after 8 hours.
+
+---
+
 ## 🛠️ Technology Stack
 
 - **Core**: React 19, TypeScript 6, Vite 8
 - **Data Provider**: Finnhub Real-Time Stock & News REST API
-- **Styling**: Tailwind CSS CDN, Dark Glassmorphism Design System
+- **Styling**: Tailwind CSS CDN, Light/Dark Glassmorphism Design System
 - **Charts & Animations**: Recharts, Canvas Confetti
 - **Icons**: Lucide React
 

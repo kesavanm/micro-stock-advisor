@@ -35,16 +35,16 @@ export const PortfolioChart: React.FC<PortfolioChartProps> = ({ summary }) => {
     <div className="glass-card p-5 sm:p-6 mb-8">
       
       {/* Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-white/10 pb-4 mb-6">
         <div className="flex items-center space-x-2.5">
-          <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+          <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
             <TrendingUp className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-display font-bold text-lg text-white">
+            <h3 className="font-display font-bold text-lg text-slate-900 dark:text-white">
               Intraday Limit Order Execution & Value Growth Curve
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               {hasOrders 
                 ? 'Simulated EOD portfolio trajectory as automated Limit Orders fill across market hours' 
                 : 'Awaiting market quotes to plot dynamic portfolio trajectory'}
@@ -52,7 +52,7 @@ export const PortfolioChart: React.FC<PortfolioChartProps> = ({ summary }) => {
           </div>
         </div>
 
-        <div className="text-xs font-mono font-bold text-emerald-400">
+        <div className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
           Target Gain: {summary.totalProjectedProfit >= 0 ? '+' : ''}${summary.totalProjectedProfit.toFixed(2)} ({summary.totalProjectedRoiPercent >= 0 ? '+' : ''}{summary.totalProjectedRoiPercent.toFixed(1)}%)
         </div>
       </div>
@@ -67,7 +67,7 @@ export const PortfolioChart: React.FC<PortfolioChartProps> = ({ summary }) => {
                 <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(100,116,139,0.22)" />
             <XAxis dataKey="time" stroke="#94a3b8" fontSize={11} />
             <YAxis stroke="#94a3b8" fontSize={11} domain={['auto', 'auto']} tickFormatter={(v) => `$${v}`} />
             <Tooltip

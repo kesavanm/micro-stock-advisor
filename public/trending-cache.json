@@ -1,20 +1,27 @@
 {
-  "updatedAt": "2026-11-15T00:00:29.278Z",
-  "timestamp": 1794700829278,
+  "updatedAt": "2026-11-16T22:29:58.574Z",
+  "timestamp": 1794868198575,
   "ttlHours": 2,
   "trendingTickers": [
-    "BX",
-    "AMP",
-    "ARES",
-    "KKR",
-    "TROW",
-    "BLK",
-    "BNY",
-    "NTRS"
+    "MITI",
+    "RHI",
+    "ZTS",
+    "OMQS",
+    "ICNM",
+    "COCM",
+    "PFE",
+    "VTRS"
   ],
   "suggestions": [
-    "TPG",
-    "BAM",
-    "STT"
+    "FCNCA",
+    "FRBT",
+    "BMY",
+    "LLY",
+    "USB",
+    "FINN",
+    "KEY",
+    "JNJ",
+    "RPRX",
+    "PNC"
   ]
 }

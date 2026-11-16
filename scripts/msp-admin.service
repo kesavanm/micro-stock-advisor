@@ -1,0 +1,21 @@
+[Unit]
+Description=MicroStock Predictor admin API
+After=network.target httpd.service
+
+[Service]
+Type=simple
+User=opc
+Group=opc
+WorkingDirectory=/home/opc/micro-stock-advisor
+EnvironmentFile=/home/opc/micro-stock-advisor/.env
+ExecStart=/usr/bin/node /home/opc/micro-stock-advisor/scripts/admin-server.cjs
+Restart=on-failure
+RestartSec=3
+
+# The deploy actions use `sudo -n`, so do not enable NoNewPrivileges.
+# If you do not want the service to deploy, remove sudo access and set
+# ADMIN_USE_SUDO=0 in .env (the deploy buttons will then fail unless the
+# web root is writable by the service user).
+
+[Install]
+WantedBy=multi-user.target

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { calculateLimitOrderStrategy } from './utils/predictorEngine';
 import { useMarketData } from './hooks/useMarketData';
 import { Header } from './components/Header';
@@ -10,12 +10,26 @@ import { NewsSentimentFeed } from './components/NewsSentimentFeed';
 import { PortfolioChart } from './components/PortfolioChart';
 import { OrderSimulatorModal } from './components/OrderSimulatorModal';
 import { WatchlistModal } from './components/WatchlistModal';
+import { AdminPage } from './components/AdminPage';
 import { TrendingUp, AlertCircle } from 'lucide-react';
 
 export function App() {
   const [dailyBudget, setDailyBudget] = useState<number>(200);
   const [isSimulatorOpen, setIsSimulatorOpen] = useState<boolean>(false);
   const [isWatchlistOpen, setIsWatchlistOpen] = useState<boolean>(false);
+  const [isAdminOpen, setIsAdminOpen] = useState<boolean>(() => window.location.hash === '#admin');
+
+  // Open/close admin via URL hash
+  useEffect(() => {
+    const onHashChange = () => setIsAdminOpen(window.location.hash === '#admin');
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  const closeAdmin = () => {
+    window.location.hash = '';
+    setIsAdminOpen(false);
+  };
 
   // Hook connecting real-time Finnhub market quotes, general news & dynamic 2-hour trending cache
   const {
@@ -45,7 +59,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-slate-950 font-sans">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 selection:bg-emerald-500 selection:text-slate-950 font-sans">
       
       {/* Top Header with live status, clock, watchlist, and refresh */}
       <Header
@@ -62,7 +76,7 @@ export function App() {
 
       {/* Error alert banner if API key or connection fails */}
       {error && (
-        <div className="bg-rose-950/60 border-b border-rose-500/30 px-4 py-2.5 text-xs text-rose-300 flex items-center justify-between">
+        <div className="bg-rose-50 dark:bg-rose-950/60 border-b border-rose-200 dark:border-rose-500/30 px-4 py-2.5 text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between">
           <div className="flex items-center space-x-2 max-w-7xl mx-auto w-full">
             <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
             <span>{error}</span>
@@ -122,17 +136,28 @@ export function App() {
         onResetWatchlist={resetToDefaultWatchlist}
       />
 
+      {/* Admin Panel — opened via #admin hash or footer link */}
+      {isAdminOpen && <AdminPage onClose={closeAdmin} />}
+
       {/* Footer */}
-      <footer className="border-t border-white/10 bg-slate-950/80 py-6 text-xs text-slate-400">
+      <footer className="border-t border-slate-200 dark:border-white/10 bg-white/80 dark:bg-slate-950/80 py-6 text-xs text-slate-500 dark:text-slate-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-2">
-            <TrendingUp className="w-4 h-4 text-emerald-400" />
-            <span className="font-display font-semibold text-slate-200">MicroStock Predictor</span>
+            <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span className="font-display font-semibold text-slate-800 dark:text-slate-200">MicroStock Predictor</span>
             <span>— Micro-Investor AI Morning News Stock Engine</span>
           </div>
 
           <div className="flex items-center space-x-4 text-slate-500">
             <span>Built for Micro-Capital Trading ($200/day max)</span>
+            <a
+              href="#admin"
+              className="inline-flex items-center gap-1 opacity-50 hover:opacity-100 transition-opacity select-none"
+              title="Open password-protected admin panel"
+            >
+              <span>⚙</span>
+              <span className="hidden sm:inline">Admin</span>
+            </a>
           </div>
         </div>
       </footer>
