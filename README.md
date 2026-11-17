@@ -128,6 +128,9 @@ npm run preview
 sudo cp -r dist/* /var/www/html/advisor/
 ```
 
+> [!NOTE]
+> On this host Apache also terminates HTTPS with a Let’s Encrypt certificate for `misc.kesavan.info`, so both `http://` and `https://` work. See [README-tech.md](README-tech.md#35-https--tls) for TLS setup and renewal.
+
 ---
 
 ## 🔐 Password-Protected Admin Panel

@@ -49,7 +49,7 @@ Secrets live only in `.env`, which is gitignored.
 ### 3.1 Static frontend
 
 - **Document root:** `/var/www/html/advisor`
-- **Public URL:** `https://<host>/advisor/`
+- **Public URL:** `https://misc.kesavan.info/advisor/`
 - **Assets:** hashed bundles under `/advisor/assets/`
 - Apache headers in `/etc/httpd/conf.d/msp-admin.conf`:
   - `index.html` and `trending-cache.json`: `Cache-Control: no-store`
@@ -86,6 +86,17 @@ The unit deliberately does **not** use `EnvironmentFile=`. SELinux denies `init_
 ```
 
 The generator writes both `public/trending-cache.json` and the deployed copy in `/var/www/html/advisor/`.
+
+### 3.5 HTTPS / TLS
+
+Apache now terminates TLS directly on this host using `mod_ssl` and a Let’s Encrypt certificate for `misc.kesavan.info`:
+
+- Cert/key: `/etc/letsencrypt/live/misc.kesavan.info/{fullchain.pem,privkey.pem}`
+- Apache config: `/etc/httpd/conf.d/ssl.conf` (`<VirtualHost _default_:443>`, `ServerName misc.kesavan.info:443`)
+- Both `http://` and `https://` serve `/advisor/`; there is no forced redirect.
+- Renewal: root cron `0 3,15 * * * /usr/local/bin/certbot renew --quiet`. The `renew_hook = systemctl reload httpd` is stored in `/etc/letsencrypt/renewal/misc.kesavan.info.conf`.
+- Certbot was installed via pip at `/usr/local/bin/certbot` because EPEL is not configured on this host; `cryptography` is pinned to `<50` for OCI SDK compatibility.
+- Verified: `https://misc.kesavan.info/advisor/` → `200`, `/advisor/api/admin/status` → `401`, valid Let’s Encrypt cert through 2027-02-15.
 
 ---
 
@@ -217,6 +228,12 @@ sudo systemctl reload httpd
 
 # Health check (401 means the API is up and auth is enforced)
 curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1/advisor/api/admin/status
+curl -sS -o /dev/null -w '%{http_code}\n' https://misc.kesavan.info/advisor/api/admin/status
+
+# TLS / certificates
+sudo /usr/local/bin/certbot certificates
+sudo /usr/local/bin/certbot renew --dry-run
+sudo crontab -l
 
 # Cache cron
 crontab -l
@@ -245,7 +262,8 @@ Deploy actions require passwordless sudo (`sudo -n`) for the service user, or se
 | `2f3de86` | Fixed systemd startup by loading `.env` inside the server (SELinux-safe) |
 | `18d8e85` | Raised admin operation timeout to 15 minutes across Apache, Node, and child processes |
 | `c99f234` | Rewrote technical docs and recorded admin usage/operations |
-| _this update_ | Moved the theme switch from the admin panel into the dashboard header for all users |
+| `500abfb` | Moved the theme switch from the admin panel into the dashboard header for all users |
+| _this update_ | Enabled HTTPS on the origin with `mod_ssl` + Let’s Encrypt, auto-renewal, and docs |
 
 PM2 previously supervised the admin API and produced repeated “port in use” restarts; that process was removed and its state saved empty.
 
