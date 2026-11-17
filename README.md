@@ -177,6 +177,8 @@ The build/deploy buttons use `sudo -n`, so the service user needs passwordless s
 
 > [!NOTE]
 > The admin API binds to `127.0.0.1` only. It is never exposed directly to the internet; Apache proxies it. Login attempts are rate-limited, and sessions expire after 8 hours.
+>
+> Long-running actions (build, deploy, cache refresh) are allowed up to **15 minutes**. This is aligned across Apache (`ProxyPass ... timeout=900`), Node (`requestTimeout`/`headersTimeout`), and the child-process timeouts in `scripts/admin-server.cjs`.
 
 ---
 

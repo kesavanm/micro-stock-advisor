@@ -55,6 +55,9 @@ const SESSION_TTL_MS = Number(process.env.ADMIN_SESSION_TTL_MS) || 8 * 60 * 60 *
 const LOGIN_WINDOW_MS = 5 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = Number(process.env.ADMIN_LOGIN_MAX_ATTEMPTS) || 8;
 const MAX_BODY_BYTES = 8 * 1024;
+// Build/deploy/cache actions can take a while; keep Node, child processes and
+// the Apache proxy timeout aligned at 15 minutes.
+const REQUEST_TIMEOUT_MS = 15 * 60 * 1000;
 
 if (!ADMIN_PASSWORD) {
   console.error('[admin-server] ADMIN_PASSWORD is not set. Add it to .env and restart.');
@@ -185,7 +188,7 @@ function run(command, args, options = {}) {
       command,
       args,
       {
-        timeout: 120_000,
+        timeout: REQUEST_TIMEOUT_MS,
         maxBuffer: 4 * 1024 * 1024,
         env: { ...process.env, PATH: process.env.PATH || '/usr/bin:/usr/local/bin' },
         ...options,
@@ -339,7 +342,7 @@ async function runBuild() {
   try {
     const { stdout, stderr } = await run(NPM_BIN, ['run', 'build'], {
       cwd: PROJECT_DIR,
-      timeout: 300_000,
+      timeout: REQUEST_TIMEOUT_MS,
     });
 
     const deploy = await deployDist();
@@ -461,7 +464,7 @@ const server = http.createServer(async (req, res) => {
         const { stdout, stderr } = await run(
           NODE_BIN,
           [path.join(PROJECT_DIR, 'scripts/generate_trending_cache.cjs')],
-          { cwd: PROJECT_DIR, timeout: 120_000 }
+          { cwd: PROJECT_DIR, timeout: REQUEST_TIMEOUT_MS }
         );
 
         // The generator writes to public/ and (when writable) to the web root.
@@ -597,6 +600,11 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 500, { error: err.message || 'Internal server error.' });
   }
 });
+
+// Node's defaults are 5 min for requests and 1 min for headers; raise both so
+// Apache's 15-minute proxy timeout is the real limit for admin actions.
+server.requestTimeout = REQUEST_TIMEOUT_MS;
+server.headersTimeout = REQUEST_TIMEOUT_MS;
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
