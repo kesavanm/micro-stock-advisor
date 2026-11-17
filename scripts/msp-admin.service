@@ -7,7 +7,9 @@ Type=simple
 User=opc
 Group=opc
 WorkingDirectory=/home/opc/micro-stock-advisor
-EnvironmentFile=/home/opc/micro-stock-advisor/.env
+# admin-server.cjs loads .env itself as the service user. Do not use
+# EnvironmentFile= here: systemd (init_t) is denied reading user_home_t
+# files by SELinux on this host.
 ExecStart=/usr/bin/node /home/opc/micro-stock-advisor/scripts/admin-server.cjs
 Restart=on-failure
 RestartSec=3
