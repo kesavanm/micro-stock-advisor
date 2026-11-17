@@ -13,6 +13,9 @@ An interactive, AI-driven daily stock recommendation web application tailored sp
   - Real-time stock quotes, session open/high/low/close prices, and day percentage changes directly via Finnhub API.
   - Live EST/EDT market clock showing active session state (`Pre-Market`, `Market Open`, `After-Hours`, `Weekend Closed`).
   - Auto-refresh polling every 60 seconds with manual one-click refresh button.
+- **🎨 User Theme Switch**:
+  - Light, Dark, or System mode available directly in the header to everyone — no admin login required.
+  - The choice is saved in this browser and applied before first paint.
 - **💰 $200 Micro-Investor Daily Budget Engine**:
   - Automatically splits your daily budget ($50 to $500, default **$200**) across 5 high-momentum picks (**$40 allocation per stock**).
 - **📰 Real-Time Financial News & NLP Sentiment Parser**:
@@ -138,7 +141,9 @@ The panel lets you:
 - **Hard refresh (deploy dist)** — re-copies `index.html`, CSS, JS, and public files to Apache without rebuilding.
 - **Remove stale assets** — deletes old hashed bundles that the current `index.html` no longer references.
 - **Build & deploy new version** — runs `npm run build`, deploys the new bundle, and prunes stale assets.
-- **Switch the theme** — Light, Dark, or follow the operating system. The choice is saved in the browser.
+
+> [!NOTE]
+> Theme switching is no longer admin-only. Use the Light/Dark/System control in the dashboard header; no credentials required.
 
 ### 1. Configure the admin password
 

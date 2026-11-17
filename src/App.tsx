@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { calculateLimitOrderStrategy } from './utils/predictorEngine';
 import { useMarketData } from './hooks/useMarketData';
+import { useTheme } from './hooks/useTheme';
 import { Header } from './components/Header';
 import { MarketTickerTape } from './components/MarketTickerTape';
 import { BudgetOverviewHero } from './components/BudgetOverviewHero';
@@ -18,6 +19,7 @@ export function App() {
   const [isSimulatorOpen, setIsSimulatorOpen] = useState<boolean>(false);
   const [isWatchlistOpen, setIsWatchlistOpen] = useState<boolean>(false);
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(() => window.location.hash === '#admin');
+  const { theme, resolved, setTheme } = useTheme();
 
   // Open/close admin via URL hash
   useEffect(() => {
@@ -72,6 +74,9 @@ export function App() {
         onRefresh={() => refreshData()}
         watchlistCount={watchlist.length}
         onOpenWatchlist={() => setIsWatchlistOpen(true)}
+        theme={theme}
+        resolvedTheme={resolved}
+        onThemeChange={setTheme}
       />
 
       {/* Error alert banner if API key or connection fails */}

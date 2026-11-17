@@ -11,6 +11,7 @@ Last updated: **2026-11-17**
 - Full application source is in this repository (React 19 + TypeScript 6 + Vite 8).
 - The production SPA is served from **`/var/www/html/advisor`** under the **`/advisor/`** base path.
 - A password-protected admin panel is available at **`/advisor/#admin`**, backed by a localhost-only Node API.
+- The Light/Dark/System theme switch lives in the dashboard header and is available to **all users** (no admin credentials).
 - The admin API is supervised by **systemd** (`msp-admin.service`), not PM2.
 - The trending-ticker cache is regenerated every **2 hours** by cron and on demand from the admin panel.
 - Long-running admin actions (build, deploy, cache refresh) are allowed up to **15 minutes** across Apache, Node, and child processes.
@@ -22,7 +23,8 @@ Last updated: **2026-11-17**
 | Path | Purpose |
 |---|---|
 | `src/App.tsx` | Root app; route/hash handling for `#admin` |
-| `src/components/AdminPage.tsx` | Password-protected admin UI (status, cache, deploy, theme) |
+| `src/components/AdminPage.tsx` | Password-protected admin UI (status, cache, deploy, build) |
+| `src/components/Header.tsx` | User-facing header with Light/Dark/System theme switch for everyone |
 | `src/components/*.tsx` | Dashboard UI: table, charts, news feed, order simulator, watchlist, etc. |
 | `src/hooks/useMarketData.ts` | Market/news data loading and refresh loop |
 | `src/hooks/useTheme.ts` | Shared light/dark/system theme controller (`msp_theme`) |
@@ -151,8 +153,10 @@ It is fetched client-side with a cache-busting query and falls back to a locally
 - **Hard refresh / deploy dist** — recopies the current `dist/` bundle to Apache without rebuilding.
 - **Build & deploy new version** — runs `npm run build`, deploys, and prunes stale hashed assets.
 - **Remove stale assets** — deletes bundles no longer referenced by `index.html`.
-- **Theme switch** — Light / Dark / System; shared with the main dashboard via `msp_theme`.
 - **Status & build log** — shows cache age, active bundle, deployed assets, build result/log.
+
+> [!NOTE]
+> Theme switching is a user-facing feature in the dashboard header (Light / Dark / System). It uses the same `msp_theme` key but requires no admin credentials.
 
 ### 6.3 API endpoints
 
@@ -237,10 +241,11 @@ Deploy actions require passwordless sudo (`sudo -n`) for the service user, or se
 
 | Commit | Change |
 |---|---|
-| `c288ab4` | Added password-protected admin panel (cache, deploy/build, theme, status) |
+| `c288ab4` | Added password-protected admin panel (cache, deploy/build, status) |
 | `2f3de86` | Fixed systemd startup by loading `.env` inside the server (SELinux-safe) |
 | `18d8e85` | Raised admin operation timeout to 15 minutes across Apache, Node, and child processes |
-| _this update_ | Rewrote technical docs and recorded admin usage/operations |
+| `c99f234` | Rewrote technical docs and recorded admin usage/operations |
+| _this update_ | Moved the theme switch from the admin panel into the dashboard header for all users |
 
 PM2 previously supervised the admin API and produced repeated “port in use” restarts; that process was removed and its state saved empty.
 

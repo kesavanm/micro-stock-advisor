@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Clock, DollarSign, RefreshCw, Radio, ListFilter } from 'lucide-react';
+import { TrendingUp, Clock, DollarSign, RefreshCw, Radio, ListFilter, Sun, Moon, Monitor } from 'lucide-react';
+import type { Theme, ResolvedTheme } from '../hooks/useTheme';
 
 interface HeaderProps {
   dailyBudget: number;
@@ -11,6 +12,9 @@ interface HeaderProps {
   onRefresh: () => void;
   watchlistCount: number;
   onOpenWatchlist: () => void;
+  theme: Theme;
+  resolvedTheme: ResolvedTheme;
+  onThemeChange: (theme: Theme) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,6 +26,9 @@ export const Header: React.FC<HeaderProps> = ({
   onRefresh,
   watchlistCount,
   onOpenWatchlist,
+  theme,
+  resolvedTheme,
+  onThemeChange,
 }) => {
   const [estTimeStr, setEstTimeStr] = useState<string>('');
   const [marketStatus, setMarketStatus] = useState<string>('Market Active');
@@ -128,6 +135,35 @@ export const Header: React.FC<HeaderProps> = ({
             <ListFilter className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
             <span>Watchlist ({watchlistCount})</span>
           </button>
+
+          {/* Theme Switcher (available to all users) */}
+          <div
+            className="flex items-center gap-0.5 p-0.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10"
+            role="group"
+            aria-label="Color theme"
+          >
+            {([
+              { value: 'light', label: 'Light', icon: Sun },
+              { value: 'dark', label: 'Dark', icon: Moon },
+              { value: 'system', label: 'System', icon: Monitor },
+            ] as const).map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => onThemeChange(value)}
+                aria-label={`${label} theme`}
+                aria-pressed={theme === value}
+                title={`${label} theme${theme === value ? ` · active (${resolvedTheme})` : ''}`}
+                className={`p-1.5 rounded-lg transition ${
+                  theme === value
+                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+              </button>
+            ))}
+          </div>
 
           {/* Daily Budget Cap */}
           <div className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-700 dark:text-emerald-300 font-bold font-mono">

@@ -2,12 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import {
   Lock, Unlock, RefreshCw, Trash2, Hammer, Package,
-  Sun, Moon, Monitor, CheckCircle, XCircle, Loader2, Terminal,
+  CheckCircle, XCircle, Loader2, Terminal,
   ChevronDown, ChevronUp, LogOut, Wifi, ShieldCheck, Rocket,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useTheme } from '../hooks/useTheme';
-import type { Theme } from '../hooks/useTheme';
 
 // Admin API lives at /advisor/api/admin/ (Apache proxies to localhost:8081).
 // In dev, vite.config.ts proxies the same path.
@@ -490,7 +488,6 @@ export function AdminPage({ onClose }: { onClose: () => void }) {
   const [buildResult, setBuildResult] = useState<ActionResult>(idleResult);
   const [buildLogKey, setBuildLogKey] = useState(0);
 
-  const { theme, resolved, setTheme } = useTheme();
   const isAuthenticated = !!token;
 
   const logoutLocal = useCallback((message = '') => {
@@ -630,13 +627,6 @@ export function AdminPage({ onClose }: { onClose: () => void }) {
     () => 'Build started — watching the log below.',
     () => setBuildLogKey((key) => key + 1)
   );
-
-  // ── Theme options ──────────────────────────────────────────────────────────
-  const themeOptions: Array<{ value: Theme; label: string; icon: LucideIcon }> = [
-    { value: 'light', label: 'Light', icon: Sun },
-    { value: 'dark', label: 'Dark', icon: Moon },
-    { value: 'system', label: 'System', icon: Monitor },
-  ];
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -819,41 +809,6 @@ export function AdminPage({ onClose }: { onClose: () => void }) {
                   <BuildLogPanel token={token} autoStartKey={buildLogKey} />
                 </section>
 
-                {/* ── Theme ── */}
-                <section className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      Appearance
-                    </h3>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-500">
-                      Active: {resolved}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {themeOptions.map(({ value, label, icon: Icon }) => {
-                      const selected = theme === value;
-                      return (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => setTheme(value)}
-                          aria-pressed={selected}
-                          className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-medium transition ${
-                            selected
-                              ? 'bg-emerald-50 dark:bg-emerald-500/15 border-emerald-400 dark:border-emerald-500/50 text-emerald-700 dark:text-emerald-300'
-                              : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
-                          }`}
-                        >
-                          <Icon className="w-4 h-4" />
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-500">
-                    The choice is saved in this browser and applies to the dashboard immediately.
-                  </p>
-                </section>
               </>
             )}
           </div>

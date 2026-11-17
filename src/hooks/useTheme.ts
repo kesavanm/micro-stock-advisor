@@ -51,7 +51,8 @@ export function applyTheme(theme: Theme): ResolvedTheme {
 
 /**
  * Shared light/dark/system theme controller.
- * The admin panel and the app both read the same `msp_theme` key.
+ * The header and app read the same `msp_theme` key so every user can change
+ * the theme without admin access.
  */
 export function useTheme() {
   const [theme, setThemeState] = useState<Theme>(() => getStoredTheme());
